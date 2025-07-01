@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLHeli_S 流程图查看器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .nav {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .nav li {
+            margin-right: 10px;
+        }
+        .nav a {
+            text-decoration: none;
+            color: #3498db;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 3px;
+            transition: background-color 0.3s;
+        }
+        .nav a:hover {
+            background-color: #eaf2f8;
+        }
+        .diagram-section {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .diagram-container {
+            overflow: auto;
+            max-width: 100%;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .diagram-container svg {
+            min-width: 800px;
+            width: 100%;
+            height: auto;
+        }
+        .controls {
+            margin: 10px 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .zoom-level {
+            font-size: 14px;
+            color: #666;
+        }
+        .description {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: #7f8c8d;
+            padding: 20px 0;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>BLHeli_S 流程图查看器</h1>
+            <p>这个页面提供了BLHeli_S电调固件的各个流程图的交互式查看功能。您可以放大、缩小和平移这些SVG流程图以便更好地查看细节。</p>
+        </header>
+
+        <nav class="nav">
+            <ul>
+                <li><a href="#main-flow">主流程图</a></li>
+                <li><a href="#startup-flow">启动和初始化流程图</a></li>
+                <li><a href="#zc-comm-flow">零交叉检测和换向流程图</a></li>
+                <li><a href="#run-phase-flow">运行阶段流程图</a></li>
+                <li><a href="#interrupt-flow">中断处理流程图</a></li>
+                <li><a href="#dshot-flow">DShot命令处理流程图</a></li>
+                <li><a href="#timing-flow">换相时序计算流程图</a></li>
+            </ul>
+        </nav>
+
+        <section id="main-flow" class="diagram-section">
+            <h2>主流程图</h2>
+            <div class="description">
+                <p>BLHeli_S 固件的主要流程，包括初始化、信号检测、武装、等待加电和电机运行等主要阶段。</p>
+                <p>内容：系统初始化、信号检测、武装流程、等待加电、电机启动和运行的主要状态转换。</p>
+            </div>
+            <div class="controls">
+                <button onclick="zoomIn('main-flow-svg')">放大</button>
+                <button onclick="zoomOut('main-flow-svg')">缩小</button>
+                <button onclick="resetZoom('main-flow-svg')">重置</button>
+                <span class="zoom-level" id="main-flow-zoom">缩放: 100%</span>
+            </div>
+            <div class="diagram-container" id="main-flow-container">
+                <object id="main-flow-svg" data="main_flow.svg" type="image/svg+xml" width="100%"></object>
+            </div>
+        </section>
+
+        <section id="startup-flow" class="diagram-section">
+            <h2>启动和初始化流程图</h2>
+            <div class="description">
+                <p>详细展示系统启动和初始化过程，包括参数读取、信号类型检测和校准等。</p>
+                <p>内容：系统初始化、参数读取、信号类型自动检测、油门校准和编程模式等流程。</p>
+            </div>
+            <div class="controls">
+                <button onclick="zoomIn('startup-flow-svg')">放大</button>
+                <button onclick="zoomOut('startup-flow-svg')">缩小</button>
+                <button onclick="resetZoom('startup-flow-svg')">重置</button>
+                <span class="zoom-level" id="startup-flow-zoom">缩放: 100%</span>
+            </div>
+            <div class="diagram-container" id="startup-flow-container">
+                <object id="startup-flow-svg" data="startup_flow.svg" type="image/svg+xml" width="100%"></object>
+            </div>
+        </section>
+
+        <section id="zc-comm-flow" class="diagram-section">
+            <h2>零交叉检测和换向流程图</h2>
+            <div class="description">
+                <p>详细展示零交叉检测和电机换向的处理流程。</p>
+                <p>内容：零交叉扫描、比较器检测、换向时序调整和换向执行等关键步骤。</p>
+            </div>
+            <div class="controls">
+                <button onclick="zoomIn('zc-comm-flow-svg')">放大</button>
+                <button onclick="zoomOut('zc-comm-flow-svg')">缩小</button>
+                <button onclick="resetZoom('zc-comm-flow-svg')">重置</button>
+                <span class="zoom-level" id="zc-comm-flow-zoom">缩放: 100%</span>
+            </div>
+            <div class="diagram-container" id="zc-comm-flow-container">
+                <object id="zc-comm-flow-svg" data="zc_comm_flow.svg" type="image/svg+xml" width="100%"></object>
+            </div>
+        </section>
+
+        <section id="run-phase-flow" class="diagram-section">
+            <h2>运行阶段流程图</h2>
+            <div class="description">
+                <p>详细展示电机正常运行时的六步换向和状态检查流程。</p>
+                <p>内容：六个运行阶段、启动阶段检查、初始运行阶段检查、双向模式处理和方向变化处理等。</p>
+            </div>
+            <div class="controls">
+                <button onclick="zoomIn('run-phase-flow-svg')">放大</button>
+                <button onclick="zoomOut('run-phase-flow-svg')">缩小</button>
+                <button onclick="resetZoom('run-phase-flow-svg')">重置</button>
+                <span class="zoom-level" id="run-phase-flow-zoom">缩放: 100%</span>
+            </div>
+            <div class="diagram-container" id="run-phase-flow-container">
+                <object id="run-phase-flow-svg" data="run_phase_flow.svg" type="image/svg+xml" width="100%"></object>
+            </div>
+        </section>
+
+        <section id="interrupt-flow" class="diagram-section">
+            <h2>中断处理流程图</h2>
+            <div class="description">
+                <p>详细展示各种中断的处理逻辑，包括定时器中断和外部中断。</p>
+                <p>内容：Timer0-3中断、外部中断0和PCA中断的处理流程，包括RC脉冲捕获、DShot解码、换向和零交叉检测等。</p>
+            </div>
+            <div class="controls">
+                <button onclick="zoomIn('interrupt-flow-svg')">放大</button>
+                <button onclick="zoomOut('interrupt-flow-svg')">缩小</button>
+                <button onclick="resetZoom('interrupt-flow-svg')">重置</button>
+                <span class="zoom-level" id="interrupt-flow-zoom">缩放: 100%</span>
+            </div>
+            <div class="diagram-container" id="interrupt-flow-container">
+                <object id="interrupt-flow-svg" data="interrupt_flow.svg" type="image/svg+xml" width="100%"></object>
+            </div>
+        </section>
+
+        <section id="dshot-flow" class="diagram-section">
+            <h2>DShot命令处理流程图</h2>
+            <div class="description">
+                <p>详细展示DShot命令的处理逻辑，包括蜂鸣、方向控制和保存设置等命令。</p>
+                <p>内容：DShot命令解析、命令计数器处理、蜂鸣命令、方向命令和保存设置命令的处理流程。</p>
+            </div>
+            <div class="controls">
+                <button onclick="zoomIn('dshot-flow-svg')">放大</button>
+                <button onclick="zoomOut('dshot-flow-svg')">缩小</button>
+                <button onclick="resetZoom('dshot-flow-svg')">重置</button>
+                <span class="zoom-level" id="dshot-flow-zoom">缩放: 100%</span>
+            </div>
+            <div class="diagram-container" id="dshot-flow-container">
+                <object id="dshot-flow-svg" data="dshot_flow.svg" type="image/svg+xml" width="100%"></object>
+            </div>
+        </section>
+
+        <section id="timing-flow" class="diagram-section">
+            <h2>换相时序计算流程图</h2>
+            <div class="description">
+                <p>详细展示calc_next_comm_timing函数的逻辑，说明如何计算换相时序和零交叉检测时间。</p>
+                <p>内容：换相时间存储、平均时间计算、电角度时间计算、零交叉扫描延时设置、提前换相定时设置等。</p>
+            </div>
+            <div class="controls">
+                <button onclick="zoomIn('timing-flow-svg')">放大</button>
+                <button onclick="zoomOut('timing-flow-svg')">缩小</button>
+                <button onclick="resetZoom('timing-flow-svg')">重置</button>
+                <span class="zoom-level" id="timing-flow-zoom">缩放: 100%</span>
+            </div>
+            <div class="diagram-container" id="timing-flow-container">
+                <object id="timing-flow-svg" data="timing_flow.svg" type="image/svg+xml" width="100%"></object>
+            </div>
+        </section>
+
+        <footer>
+            <p>BLHeli_S 流程图查看器 | 基于Graphviz生成的SVG流程图</p>
+            <p><a href="flow_diagrams_svg.md">查看流程图索引文档</a> | <a href="flow_diagrams_index.md">查看原始DOT流程图索引文档</a></p>
+        </footer>
+    </div>
+
+    <script>
+        // 存储每个SVG的缩放级别
+        const zoomLevels = {
+            'main-flow-svg': 1,
+            'startup-flow-svg': 1,
+            'zc-comm-flow-svg': 1,
+            'run-phase-flow-svg': 1,
+            'interrupt-flow-svg': 1,
+            'dshot-flow-svg': 1,
+            'timing-flow-svg': 1
+        };
+
+        // 放大函数
+        function zoomIn(svgId) {
+            zoomLevels[svgId] *= 1.2;
+            updateZoom(svgId);
+        }
+
+        // 缩小函数
+        function zoomOut(svgId) {
+            zoomLevels[svgId] /= 1.2;
+            updateZoom(svgId);
+        }
+
+        // 重置缩放
+        function resetZoom(svgId) {
+            zoomLevels[svgId] = 1;
+            updateZoom(svgId);
+        }
+
+        // 更新缩放
+        function updateZoom(svgId) {
+            const svgObj = document.getElementById(svgId);
+            const zoomLevel = zoomLevels[svgId];
+            
+            // 更新SVG对象的缩放
+            svgObj.style.transform = `scale(${zoomLevel})`;
+            svgObj.style.transformOrigin = 'top left';
+            
+            // 更新缩放百分比显示
+            const zoomText = document.getElementById(svgId.replace('-svg', '-zoom'));
+            zoomText.textContent = `缩放: ${Math.round(zoomLevel * 100)}%`;
+        }
+
+        // 页面加载完成后初始化
+        window.onload = function() {
+            // 为每个SVG对象添加加载事件
+            const svgObjects = document.querySelectorAll('object[type="image/svg+xml"]');
+            svgObjects.forEach(obj => {
+                obj.onload = function() {
+                    // SVG加载完成后的初始化
+                    console.log(`${obj.id} 已加载`);
+                };
+            });
+
+            // 平滑滚动到锚点
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.offsetTop - 20,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+        };
+    </script>
+</body>
+</html>

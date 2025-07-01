@@ -1,0 +1,112 @@
+digraph BLHeli_S_Startup_Flow {
+    // 图形设置
+    rankdir=TB;
+    node [shape=box, style=filled, fillcolor=lightblue, fontname="Arial", fontsize=12];
+    edge [fontname="Arial", fontsize=10];
+    
+    // 初始化节点
+    pgm_start [label="程序启动\npgm_start", fillcolor=lightgreen];
+    init_hardware [label="硬件初始化\n(时钟、端口、中断等)"];
+    clear_ram [label="清除RAM"];
+    set_default_parameters [label="设置默认参数\nset_default_parameters"];
+    read_eeprom_parameters [label="读取EEPROM参数\nread_all_eeprom_parameters"];
+    init_beep [label="初始化蜂鸣\n(beep_f1, beep_f2, beep_f3)"];
+    
+    // 信号检测节点
+    init_no_signal [label="无信号初始化\ninit_no_signal", fillcolor=lightyellow];
+    check_bootloader [label="检查是否进入引导程序", shape=diamond];
+    decode_settings [label="解码设置\ndecode_settings"];
+    find_throttle_gains [label="查找油门增益\nfind_throttle_gains"];
+    setup_timers [label="设置定时器"];
+    test_signal_type [label="测试信号类型\n(PWM/OneShot/DShot)"];
+    
+    // 解锁节点
+    validate_rcp_start [label="验证RC脉冲\nvalidate_rcp_start"];
+    arming_start [label="解锁序列开始\narming_start"];
+    check_tx_programming [label="检查TX编程", shape=diamond];
+    throttle_calibration [label="油门校准"];
+    store_calibration [label="存储校准值"];
+    arm_end_beep [label="解锁结束蜂鸣"];
+    
+    // 启动节点
+    wait_for_power_on [label="等待加电\nwait_for_power_on", fillcolor=lightpink];
+    check_power_on [label="检查加电", shape=diamond];
+    check_dshot_cmd [label="检查DShot命令", shape=diamond];
+    init_start [label="启动初始化\ninit_start"];
+    read_initial_temp [label="读取初始温度"];
+    set_startup_conditions [label="设置启动条件"];
+    startup_commutation [label="启动换向\n(comm5comm6, comm6comm1)"];
+    initialize_timing [label="初始化时序\ninitialize_timing"];
+    
+    // 初始化流程
+    pgm_start -> init_hardware;
+    init_hardware -> clear_ram;
+    clear_ram -> set_default_parameters;
+    set_default_parameters -> read_eeprom_parameters;
+    read_eeprom_parameters -> init_beep;
+    init_beep -> init_no_signal;
+    
+    // 信号检测流程
+    init_no_signal -> check_bootloader;
+    check_bootloader -> decode_settings [label="否"];
+    check_bootloader -> bootloader [label="是", style=dashed];
+    decode_settings -> find_throttle_gains;
+    find_throttle_gains -> setup_timers;
+    setup_timers -> test_signal_type;
+    test_signal_type -> validate_rcp_start;
+    
+    // 解锁流程
+    validate_rcp_start -> arming_start;
+    arming_start -> check_tx_programming;
+    check_tx_programming -> throttle_calibration [label="是"];
+    check_tx_programming -> arm_end_beep [label="否"];
+    throttle_calibration -> store_calibration;
+    store_calibration -> init_no_signal [label="返回检测信号"];
+    arm_end_beep -> wait_for_power_on;
+    
+    // 启动流程
+    wait_for_power_on -> check_power_on;
+    check_power_on -> check_dshot_cmd [label="油门=0"];
+    check_power_on -> init_start [label="油门>0"];
+    check_dshot_cmd -> process_dshot_cmd [label="有命令", style=dashed];
+    check_dshot_cmd -> wait_for_power_on [label="无命令"];
+    init_start -> read_initial_temp;
+    read_initial_temp -> set_startup_conditions;
+    set_startup_conditions -> startup_commutation;
+    startup_commutation -> initialize_timing;
+    initialize_timing -> run1 [label="进入运行阶段", style=dashed];
+    
+    // 子流程说明
+    subgraph cluster_initialization {
+        label = "初始化子流程";
+        style = "filled";
+        color = "lightgrey";
+        pgm_start; init_hardware; clear_ram; set_default_parameters; read_eeprom_parameters; init_beep;
+    }
+    
+    subgraph cluster_signal_detection {
+        label = "信号检测子流程";
+        style = "filled";
+        color = "lightgrey";
+        init_no_signal; check_bootloader; decode_settings; find_throttle_gains; setup_timers; test_signal_type;
+    }
+    
+    subgraph cluster_arming {
+        label = "解锁子流程";
+        style = "filled";
+        color = "lightgrey";
+        validate_rcp_start; arming_start; check_tx_programming; throttle_calibration; store_calibration; arm_end_beep;
+    }
+    
+    subgraph cluster_startup {
+        label = "启动子流程";
+        style = "filled";
+        color = "lightgrey";
+        wait_for_power_on; check_power_on; check_dshot_cmd; init_start; read_initial_temp; set_startup_conditions; startup_commutation; initialize_timing;
+    }
+    
+    // 虚拟节点
+    bootloader [label="引导程序", style=dashed];
+    process_dshot_cmd [label="处理DShot命令", style=dashed];
+    run1 [label="运行阶段1", style=dashed];
+}

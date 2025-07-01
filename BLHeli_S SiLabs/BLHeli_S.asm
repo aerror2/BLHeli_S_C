@@ -23,86 +23,90 @@ $NOMOD51
 ;
 ;**** **** **** **** ****
 ;
-; This software was initially designed for use with Eflite mCP X, but is now adapted to copters/planes in general
+; 该软件最初设计用于Eflite mCP X，但现在已适配用于一般的多旋翼/飞机
 ;
-; The software was inspired by and started from from Bernard Konze's BLMC: http://home.versanet.de/~bkonze/blc_6a/blc_6a.htm
-; And also Simon Kirby's TGY: https://github.com/sim-/tgy
+; 该软件的灵感来源于Bernard Konze的BLMC：http://home.versanet.de/~bkonze/blc_6a/blc_6a.htm
+; 以及Simon Kirby的TGY：https://github.com/sim-/tgy
 ;
-; This file is best viewed with tab width set to 5
+; 建议将此文件的制表符宽度设置为5
 ;
-; The code is designed for multirotor applications, running damped light mode
+; 该代码专为多旋翼应用设计，运行阻尼光模式（damped light mode）
 ;
-; The input signal can be Normal (1-2ms), OneShot125 (125-250us), OneShot42 (41.7-83.3us) or Multishot (5-25us) at rates as high as allowed by the format.
-; Three Dshot signal rates are also supported, Dshot150, Dshot300 and Dshot600. A 48MHz MCU is required for Dshot600.
-; The code autodetects normal, OneShot125, Oneshot42, Multishot or Dshot.
+; 输入信号可以是普通信号(1-2ms)、OneShot125(125-250us)、OneShot42(41.7-83.3us)或Multishot(5-25us)，频率可以根据格式允许的最高频率设定。
+; 还支持三种Dshot信号速率：Dshot150、Dshot300和Dshot600。Dshot600需要48MHz的MCU。
+; 代码会自动检测普通信号、OneShot125、Oneshot42、Multishot或Dshot。
 ;
-; The first lines of the software must be modified according to the chosen environment:
+; 软件的前几行必须根据所选环境进行修改：
 ; ESCNO EQU "ESC"
 ; MCU_48MHZ EQU "N"
 ; FETON_DELAY EQU "N"
-; 
+
+
 ;**** **** **** **** ****
-; Revision history:
-; - Rev16.0 Started. Built upon rev 14.5 of base code
-;           Using hardware pwm for very smooth throttle response, silent running and support of very high rpms
-;           Implemented reverse bidirectional mode
-;           Implemented separate throttle gains fwd and rev in bidirectional mode
-;           Implemented support for Oneshot42 and Multishot
-; - Rev16.1 Made low rpm power limiting programmable through the startup power parameter
-; - Rev16.2 Fixed bug that prevented temperature protection
-;           Improved robustness to very high input signal rates
-;           Beeps can be turned off by programming beep strength to 1
-;           Throttle cal difference is checked to be above required minimum before storing. Throttle cal max is not stored until successful min throttle cal
-; - Rev16.3 Implemented programmable temperature protection
-;           Improved protection of bootloader and generally reduced risk of flash corruption
-;           Some small changes for improved sync hold
-; - Rev16.4 Fixed bug where bootloader operation could be blocked by a defective "eeprom" signature
-; - Rev16.5 Added support for DShot150, DShot300 and DShot600
-; - Rev16.6 Fixed signal detection issue of multishot at 32kHz
-;           Improved bidirectional mode for high input signal rates
-; - Rev16.7 Addition of Dshot commands for beeps and temporary reverse direction (largely by brycedjohnson)
-;   
-;        
+; 修订历史：
+; - Rev16.0 开始。基于基础代码的14.5版本构建
+;           使用硬件PWM实现非常平滑的油门响应、静音运行和对非常高转速的支持
+;           实现了反向双向模式
+;           在双向模式下实现了前进和后退的独立油门增益
+;           实现了对Oneshot42和Multishot的支持
+; - Rev16.1 通过启动功率参数使低转速功率限制可编程
+; - Rev16.2 修复了阻止温度保护的错误
+;           提高了对非常高输入信号速率的鲁棒性
+;           通过将蜂鸣器强度编程为1可以关闭蜂鸣声
+;           在存储前检查油门校准差异是否高于所需的最小值。在成功的最小油门校准之前不会存储最大油门校准
+; - Rev16.3 实现了可编程温度保护
+;           改进了对引导加载程序的保护，并普遍降低了闪存损坏的风险
+;           对同步保持进行了一些小的改进
+; - Rev16.4 修复了可能因有缺陷的"eeprom"签名而阻止引导加载程序操作的错误
+; - Rev16.5 添加了对DShot150、DShot300和DShot600的支持
+; - Rev16.6 修复了32kHz下multishot的信号检测问题
+;           改进了高输入信号速率下的双向模式
+; - Rev16.7 添加了用于蜂鸣和临时反向的Dshot命令（主要由brycedjohnson贡献）
+
+
 ;**** **** **** **** ****
-; Minimum 8K Bytes of In-System Self-Programmable Flash
-; Minimum 512 Bytes Internal SRAM
-;
+; 最低8K字节的片内自编程闪存
+; 最低512字节内部SRAM
+
 ;**** **** **** **** ****
-; Master clock is internal 24MHz oscillator (or 48MHz, for which the times below are halved)
-; Although 24/48 are used in the code, the exact clock frequencies are 24.5MHz or 49.0 MHz
-; Timer 0 (41.67ns counts) always counts up and is used for
-; - RC pulse measurement
-; Timer 1 (41.67ns counts) always counts up and is used for
-; - DShot frame sync detection
-; Timer 2 (500ns counts) always counts up and is used for
-; - RC pulse timeout counts and commutation times
-; Timer 3 (500ns counts) always counts up and is used for
-; - Commutation timeouts
-; PCA0 (41.67ns counts) always counts up and is used for
-; - Hardware PWM generation
-;
+; 主时钟是内部24MHz振荡器（或48MHz，此时下面的时间减半）
+; 虽然代码中使用24/48，但确切的时钟频率是24.5MHz或49.0MHz
+; 定时器0（41.67ns计数）始终向上计数，用于
+; - RC脉冲测量
+; 定时器1（41.67ns计数）始终向上计数，用于
+; - DShot帧同步检测
+; 定时器2（500ns计数）始终向上计数，用于
+; - RC脉冲超时计数和换向时间
+; 定时器3（500ns计数）始终向上计数，用于
+; - 换向超时
+; PCA0（41.67ns计数）始终向上计数，用于
+; - 硬件PWM生成
+
+
 ;**** **** **** **** ****
-; Interrupt handling
-; The C8051 does not disable interrupts when entering an interrupt routine.
-; Also some interrupt flags need to be cleared by software
-; The code disables interrupts in some interrupt routines
-; - Interrupts are disabled during beeps, to avoid audible interference from interrupts
-;
+; 中断处理
+; C8051在进入中断例程时不会禁用中断。
+; 此外，某些中断标志需要通过软件清除
+; 代码在某些中断例程中禁用中断
+; - 在蜂鸣期间禁用中断，以避免中断造成的可听见干扰
+
 ;**** **** **** **** ****
-; Motor control:
-; - Brushless motor control with 6 states for each electrical 360 degrees
-; - An advance timing of 0deg has zero cross 30deg after one commutation and 30deg before the next
-; - Timing advance in this implementation is set to 15deg nominally
-; - Motor pwm is always damped light (aka complementary pwm, regenerative braking)
-; Motor sequence starting from zero crossing:
-; - Timer wait: Wt_Comm			15deg	; Time to wait from zero cross to actual commutation
-; - Timer wait: Wt_Advance		15deg	; Time to wait for timing advance. Nominal commutation point is after this
-; - Timer wait: Wt_Zc_Scan		7.5deg	; Time to wait before looking for zero cross
-; - Scan for zero cross			22.5deg	; Nominal, with some motor variations
+; 电机控制：
+; - 无刷电机控制，每个电气360度有6个状态
+; - 0度的提前定时在一次换向后30度和下一次换向前30度有零交叉
+; - 此实现中的定时提前名义上设置为15度
+; - 电机PWM始终为阻尼光模式（又称互补PWM，再生制动）
+; 从零交叉开始的电机序列：
+; - 定时器等待：Wt_Comm			15度	; 从零交叉到实际换向的等待时间
+; - 定时器等待：Wt_Advance		15度	; 定时提前的等待时间。标称换向点在此之后
+; - 定时器等待：Wt_Zc_Scan		7.5度	; 在寻找零交叉之前的等待时间
+; - 扫描零交叉			22.5度	; 标称值，随电机变化而变化
 ;
-; Motor startup:
-; There is a startup phase and an initial run phase, before normal bemf commutation run begins.
-;
+; 电机启动：
+; 在正常的反电动势换向运行开始之前，有一个启动阶段和一个初始运行阶段。
+
+
+
 ;**** **** **** **** ****
 ; List of enumerated supported ESCs
 A_			EQU 1	  ; X  X  RC X  MC MB MA CC    X  X  Cc Cp Bc Bp Ac Ap

@@ -1,0 +1,81 @@
+digraph timing_flow {
+    // 图形设置
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fillcolor=lightblue, fontname="Arial", margin=0.2];
+    edge [fontname="Arial", fontsize=10];
+    
+    // 标题
+    title [shape=none, fillcolor=none, label="BLHeli_S 换相时序计算流程图", fontsize=16, fontname="Arial Bold"];
+    
+    // 主要节点
+    calc_next_comm_timing [label="calc_next_comm_timing\n换相时序计算", fillcolor=gold];
+    
+    // 计算过程节点
+    store_comm_time [label="存储当前换相时间\n到Comm_Period4-1数组"];
+    calc_avg_comm_time [label="计算前4次换相的\n平均时间"];
+    calc_degrees_15 [label="计算15度电角度时间\n(平均时间 / 6)"];
+    calc_degrees_7_5 [label="计算7.5度电角度时间\n(15度时间 / 2)"];
+    
+    // 定时器设置节点
+    set_zc_scan_timeout [label="设置零交叉扫描超时\n(Comm_Period4 * 4)"];
+    set_zc_scan_delay [label="设置零交叉扫描延时\n(7.5度电角度)"];
+    set_comm_timeout [label="设置换相超时\n(Comm_Period4 * 2)"];
+    set_advance_timing [label="设置提前换相定时\n(15度电角度 - 提前角)"];
+    
+    // 特殊情况处理节点
+    check_rpm_too_low [label="检查RPM是否过低\n(Comm_Period4 > 0xFFFF)", fillcolor=lightsalmon];
+    handle_low_rpm [label="处理低RPM情况\n设置最大周期", fillcolor=lightsalmon];
+    
+    // 启动阶段处理
+    check_startup_phase [label="检查是否处于\n启动阶段", fillcolor=lightgreen];
+    startup_timing_adjust [label="启动阶段时序调整\n使用固定延时", fillcolor=lightgreen];
+    
+    // 初始运行阶段处理
+    check_initial_run_phase [label="检查是否处于\n初始运行阶段", fillcolor=lightgreen];
+    initial_run_timing_adjust [label="初始运行阶段\n时序渐进调整", fillcolor=lightgreen];
+    
+    // 正常运行阶段处理
+    normal_run_timing [label="正常运行阶段\n根据设置的提前角计算", fillcolor=lightcyan];
+    
+    // 设置Timer3
+    set_timer3 [label="设置Timer3\n用于提前换相定时", fillcolor=lightpink];
+    
+    // 流程连接
+    title -> calc_next_comm_timing;
+    
+    calc_next_comm_timing -> store_comm_time;
+    store_comm_time -> calc_avg_comm_time;
+    calc_avg_comm_time -> calc_degrees_15;
+    calc_degrees_15 -> calc_degrees_7_5;
+    
+    calc_degrees_7_5 -> check_rpm_too_low;
+    check_rpm_too_low -> handle_low_rpm [label="是"];
+    check_rpm_too_low -> set_zc_scan_timeout [label="否"];
+    handle_low_rpm -> set_zc_scan_timeout;
+    
+    set_zc_scan_timeout -> set_zc_scan_delay;
+    set_zc_scan_delay -> set_comm_timeout;
+    
+    set_comm_timeout -> check_startup_phase;
+    check_startup_phase -> startup_timing_adjust [label="是"];
+    check_startup_phase -> check_initial_run_phase [label="否"];
+    
+    startup_timing_adjust -> set_timer3;
+    
+    check_initial_run_phase -> initial_run_timing_adjust [label="是"];
+    check_initial_run_phase -> normal_run_timing [label="否"];
+    
+    initial_run_timing_adjust -> set_timer3;
+    normal_run_timing -> set_advance_timing;
+    set_advance_timing -> set_timer3;
+    
+    // 添加说明节点
+    explanation [shape=note, fillcolor=lightyellow, label="换相时序计算逻辑:\n1. 每次换相后调用calc_next_comm_timing\n2. 存储最近4次换相时间并计算平均值\n3. 计算15度和7.5度电角度对应的时间\n4. 换相后延时7.5度开始检测零交叉\n5. 检测到零交叉后延时(15度-提前角)进行下一次换相\n6. 根据运行阶段(启动/初始运行/正常)调整时序", fontsize=10];
+    
+    explanation -> title [style=invis];
+    
+    // 添加零交叉检测和换相关系说明
+    zc_comm_relation [shape=note, fillcolor=lightyellow, label="零交叉检测与换相关系:\n- 每个相位的反电动势在电角度30度处过零\n- 理想换相点在零交叉后的电角度15度处\n- 检测窗口在换相后延时7.5度开始\n- 检测到零交叉后延时(15度-提前角)换相\n- 提前角可调整以优化效率和转矩", fontsize=10];
+    
+    zc_comm_relation -> explanation [style=invis];
+}

@@ -1,0 +1,105 @@
+digraph BLHeli_S_Run_Phase_Flow {
+    // 图形设置
+    rankdir=TB;
+    node [shape=box, style=filled, fillcolor=lightblue, fontname="Arial", fontsize=12];
+    edge [fontname="Arial", fontsize=10];
+    
+    // 运行阶段节点
+    run1 [label="运行阶段1\nrun1", fillcolor=lightgreen];
+    run2 [label="运行阶段2\nrun2", fillcolor=lightgreen];
+    run3 [label="运行阶段3\nrun3", fillcolor=lightgreen];
+    run4 [label="运行阶段4\nrun4", fillcolor=lightgreen];
+    run5 [label="运行阶段5\nrun5", fillcolor=lightgreen];
+    run6 [label="运行阶段6\nrun6", fillcolor=lightgreen];
+    
+    // 阶段检查节点
+    check_startup_phase [label="检查启动阶段\nSTARTUP_PHASE", shape=diamond, fillcolor=lightyellow];
+    check_startup_cnt [label="检查启动计数器", shape=diamond];
+    check_rcp [label="检查RC脉冲", shape=diamond];
+    check_initial_run_phase [label="检查初始运行阶段\nINITIAL_RUN_PHASE", shape=diamond, fillcolor=lightyellow];
+    check_initial_run_rot [label="检查初始运行旋转计数", shape=diamond];
+    check_bidir [label="检查双向模式\nPGM_BIDIR", shape=diamond, fillcolor=lightyellow];
+    
+    // 运行状态检查节点
+    check_timeout [label="检查超时", shape=diamond];
+    check_dir [label="检查方向", shape=diamond];
+    check_dir_change [label="检查方向变化\nDIR_CHANGE_BRAKE", shape=diamond];
+    check_speed [label="检查速度", shape=diamond];
+    
+    // 状态转换节点
+    clear_startup_phase [label="清除启动阶段标志\n设置初始运行阶段标志"];
+    clear_initial_run_phase [label="清除初始运行阶段标志\n设置电机已启动标志"];
+    set_dir_change_brake [label="设置方向变化刹车标志"];
+    clear_dir_change_brake [label="清除方向变化刹车标志\n设置初始运行阶段"];
+    run_to_wait_for_power_on [label="返回等待加电\nrun_to_wait_for_power_on", fillcolor=lightpink];
+    
+    // 运行阶段流程
+    run1 -> run2;
+    run2 -> run3;
+    run3 -> run4;
+    run4 -> run5;
+    run5 -> run6;
+    run6 -> check_startup_phase;
+    
+    // 启动阶段检查流程
+    check_startup_phase -> check_startup_cnt [label="是"];
+    check_startup_phase -> check_initial_run_phase [label="否"];
+    check_startup_cnt -> clear_startup_phase [label="计数>=24"];
+    check_startup_cnt -> check_rcp [label="计数<24"];
+    check_rcp -> run1 [label="RC脉冲>0"];
+    check_rcp -> run_to_wait_for_power_on [label="RC脉冲=0"];
+    clear_startup_phase -> check_initial_run_phase;
+    
+    // 初始运行阶段检查流程
+    check_initial_run_phase -> check_timeout [label="否"];
+    check_initial_run_phase -> check_initial_run_rot [label="是且非方向变化刹车"];
+    check_initial_run_rot -> clear_initial_run_phase [label="计数=0"];
+    check_initial_run_rot -> check_bidir [label="计数>0"];
+    check_bidir -> run1 [label="是"];
+    check_bidir -> check_rcp [label="否"];
+    clear_initial_run_phase -> run1;
+    
+    // 运行状态检查流程
+    check_timeout -> run_to_wait_for_power_on [label="超时"];
+    check_timeout -> check_bidir [label="未超时"];
+    check_bidir -> check_dir [label="是"];
+    check_bidir -> check_speed [label="否"];
+    check_dir -> check_dir_change [label="方向不匹配"];
+    check_dir -> check_speed [label="方向匹配"];
+    check_dir_change -> set_dir_change_brake [label="否"];
+    check_dir_change -> check_speed [label="是"];
+    set_dir_change_brake -> run4 [label="返回运行阶段4"];
+    check_speed -> run1 [label="速度足够"];
+    check_speed -> clear_dir_change_brake [label="速度过低且方向变化刹车"];
+    check_speed -> run_to_wait_for_power_on [label="速度过低且非方向变化刹车"];
+    clear_dir_change_brake -> run1;
+    
+    // 子流程说明
+    subgraph cluster_run_phases {
+        label = "运行阶段子流程";
+        style = "filled";
+        color = "lightgrey";
+        run1; run2; run3; run4; run5; run6;
+    }
+    
+    subgraph cluster_startup_check {
+        label = "启动阶段检查子流程";
+        style = "filled";
+        color = "lightgrey";
+        check_startup_phase; check_startup_cnt; check_rcp; clear_startup_phase;
+    }
+    
+    subgraph cluster_initial_run_check {
+        label = "初始运行阶段检查子流程";
+        style = "filled";
+        color = "lightgrey";
+        check_initial_run_phase; check_initial_run_rot; check_bidir; clear_initial_run_phase;
+    }
+    
+    subgraph cluster_run_state_check {
+        label = "运行状态检查子流程";
+        style = "filled";
+        color = "lightgrey";
+        check_timeout; check_dir; check_dir_change; check_speed; set_dir_change_brake; clear_dir_change_brake;
+    }
+}

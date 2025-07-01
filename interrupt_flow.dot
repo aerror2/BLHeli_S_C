@@ -1,0 +1,157 @@
+digraph BLHeli_S_Interrupt_Flow {
+    // 图形设置
+    rankdir=TB;
+    node [shape=box, style=filled, fillcolor=lightblue, fontname="Arial", fontsize=12];
+    edge [fontname="Arial", fontsize=10];
+    
+    // 中断处理节点
+    t0_int [label="Timer0中断\nt0_int\n(RC脉冲计时)", fillcolor=lightgreen];
+    t1_int [label="Timer1中断\nt1_int\n(DShot信号解码)", fillcolor=lightgreen];
+    t2_int [label="Timer2中断\nt2_int\n(RC超时/换向)", fillcolor=lightgreen];
+    t3_int [label="Timer3中断\nt3_int\n(换向超时/零交叉检测)", fillcolor=lightgreen];
+    int0_int [label="外部中断0\nint0_int\n(RC脉冲捕获)", fillcolor=lightgreen];
+    pca_int [label="PCA中断\npca_int\n(PWM控制)", fillcolor=lightgreen];
+    
+    // Timer0中断处理流程
+    t0_int_increment [label="递增Timer0_X\n(仅在MCU_48MHZ启用时)"];
+    t0_int_exit [label="退出中断"];
+    
+    // Timer1中断处理流程
+    t1_int_disable [label="禁用其他中断"];
+    t1_int_stop [label="停止Timer1"];
+    t1_int_save [label="保存寄存器"];
+    t1_int_read_timer2 [label="读取Timer2值\n计算帧时间长度"];
+    t1_int_check_frame [label="检查帧时间是否在允许范围内"];
+    t1_int_verify_pulses [label="验证接收到的脉冲数量"];
+    t1_int_decode_dshot [label="解码DShot数据\n(MSB和LSB解码及XOR校验)"];
+    t1_int_process_cmd [label="处理DShot命令"];
+    t1_int_restore [label="恢复寄存器"];
+    t1_int_exit [label="退出中断"];
+    
+    // Timer2中断处理流程
+    t2_int_save [label="保存寄存器"];
+    t2_int_check_timeout [label="检查RC超时"];
+    t2_int_check_wait_comm [label="检查等待换向"];
+    t2_int_check_wait_comm_done [label="检查等待换向完成"];
+    t2_int_restore [label="恢复寄存器"];
+    t2_int_exit [label="退出中断"];
+    
+    // Timer3中断处理流程
+    t3_int_save [label="保存寄存器"];
+    t3_int_clear_flag [label="清除T3_PENDING标志"];
+    t3_int_check_phase [label="检查运行阶段"];
+    t3_int_check_zc_scan [label="检查零交叉扫描"];
+    t3_int_check_comm_phase [label="根据换向相位检查比较器"];
+    t3_int_wait_for_comm [label="调用wait_for_comm"];
+    t3_int_evaluate_comp [label="调用evaluate_comparator_integrity"];
+    t3_int_restore [label="恢复寄存器"];
+    t3_int_exit [label="退出中断"];
+    
+    // 外部中断0处理流程
+    int0_int_read_pulse [label="读取RC脉冲长度"];
+    int0_int_check_range [label="检查脉冲是否在合法范围内"];
+    int0_int_update_rcp [label="更新New_Rcp和RCP_UPDATED标志"];
+    int0_int_set_pwm [label="根据Pwm_Limit设置PWM寄存器"];
+    int0_int_exit [label="退出中断"];
+    
+    // PCA中断处理流程
+    pca_int_adjust [label="根据当前PWM值调整PCA寄存器"];
+    pca_int_exit [label="退出中断"];
+    
+    // Timer0中断流程
+    t0_int -> t0_int_increment;
+    t0_int_increment -> t0_int_exit;
+    
+    // Timer1中断流程
+    t1_int -> t1_int_disable;
+    t1_int_disable -> t1_int_stop;
+    t1_int_stop -> t1_int_save;
+    t1_int_save -> t1_int_read_timer2;
+    t1_int_read_timer2 -> t1_int_check_frame;
+    t1_int_check_frame -> t1_int_verify_pulses [label="帧时间正常"];
+    t1_int_check_frame -> t1_int_restore [label="帧时间异常"];
+    t1_int_verify_pulses -> t1_int_decode_dshot [label="脉冲数量正确"];
+    t1_int_verify_pulses -> t1_int_restore [label="脉冲数量错误"];
+    t1_int_decode_dshot -> t1_int_process_cmd [label="校验正确"];
+    t1_int_decode_dshot -> t1_int_restore [label="校验错误"];
+    t1_int_process_cmd -> t1_int_restore;
+    t1_int_restore -> t1_int_exit;
+    
+    // Timer2中断流程
+    t2_int -> t2_int_save;
+    t2_int_save -> t2_int_check_timeout;
+    t2_int_check_timeout -> t2_int_check_wait_comm;
+    t2_int_check_wait_comm -> t2_int_check_wait_comm_done [label="等待换向"];
+    t2_int_check_wait_comm -> t2_int_restore [label="不等待换向"];
+    t2_int_check_wait_comm_done -> t2_int_restore;
+    t2_int_restore -> t2_int_exit;
+    
+    // Timer3中断流程
+    t3_int -> t3_int_save;
+    t3_int_save -> t3_int_clear_flag;
+    t3_int_clear_flag -> t3_int_check_phase;
+    t3_int_check_phase -> t3_int_check_zc_scan [label="启动或初始运行阶段"];
+    t3_int_check_phase -> t3_int_restore [label="正常运行阶段"];
+    t3_int_check_zc_scan -> t3_int_check_comm_phase [label="零交叉扫描"];
+    t3_int_check_zc_scan -> t3_int_restore [label="非零交叉扫描"];
+    t3_int_check_comm_phase -> t3_int_wait_for_comm [label="比较器匹配"];
+    t3_int_check_comm_phase -> t3_int_evaluate_comp [label="比较器不匹配"];
+    t3_int_wait_for_comm -> t3_int_restore;
+    t3_int_evaluate_comp -> t3_int_restore;
+    t3_int_restore -> t3_int_exit;
+    
+    // 外部中断0流程
+    int0_int -> int0_int_read_pulse;
+    int0_int_read_pulse -> int0_int_check_range;
+    int0_int_check_range -> int0_int_update_rcp [label="脉冲在范围内"];
+    int0_int_check_range -> int0_int_exit [label="脉冲超出范围"];
+    int0_int_update_rcp -> int0_int_set_pwm;
+    int0_int_set_pwm -> int0_int_exit;
+    
+    // PCA中断流程
+    pca_int -> pca_int_adjust;
+    pca_int_adjust -> pca_int_exit;
+    
+    // 子流程说明
+    subgraph cluster_timer0_int {
+        label = "Timer0中断子流程";
+        style = "filled";
+        color = "lightgrey";
+        t0_int; t0_int_increment; t0_int_exit;
+    }
+    
+    subgraph cluster_timer1_int {
+        label = "Timer1中断子流程(DShot)";
+        style = "filled";
+        color = "lightgrey";
+        t1_int; t1_int_disable; t1_int_stop; t1_int_save; t1_int_read_timer2; t1_int_check_frame; t1_int_verify_pulses; t1_int_decode_dshot; t1_int_process_cmd; t1_int_restore; t1_int_exit;
+    }
+    
+    subgraph cluster_timer2_int {
+        label = "Timer2中断子流程";
+        style = "filled";
+        color = "lightgrey";
+        t2_int; t2_int_save; t2_int_check_timeout; t2_int_check_wait_comm; t2_int_check_wait_comm_done; t2_int_restore; t2_int_exit;
+    }
+    
+    subgraph cluster_timer3_int {
+        label = "Timer3中断子流程(零交叉)";
+        style = "filled";
+        color = "lightgrey";
+        t3_int; t3_int_save; t3_int_clear_flag; t3_int_check_phase; t3_int_check_zc_scan; t3_int_check_comm_phase; t3_int_wait_for_comm; t3_int_evaluate_comp; t3_int_restore; t3_int_exit;
+    }
+    
+    subgraph cluster_int0_int {
+        label = "外部中断0子流程(RC脉冲)";
+        style = "filled";
+        color = "lightgrey";
+        int0_int; int0_int_read_pulse; int0_int_check_range; int0_int_update_rcp; int0_int_set_pwm; int0_int_exit;
+    }
+    
+    subgraph cluster_pca_int {
+        label = "PCA中断子流程(PWM)";
+        style = "filled";
+        color = "lightgrey";
+        pca_int; pca_int_adjust; pca_int_exit;
+    }
+}

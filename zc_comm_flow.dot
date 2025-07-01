@@ -1,0 +1,77 @@
+digraph BLHeli_S_ZC_Comm_Flow {
+    // 图形设置
+    rankdir=TB;
+    node [shape=box, style=filled, fillcolor=lightblue, fontname="Arial", fontsize=12];
+    edge [fontname="Arial", fontsize=10];
+    
+    // 零交叉检测节点
+    wait_for_comp_out_high [label="等待比较器输出高\nwait_for_comp_out_high", fillcolor=lightgreen];
+    wait_for_comp_out_low [label="等待比较器输出低\nwait_for_comp_out_low", fillcolor=lightgreen];
+    comp_check_timeout [label="检查超时\ncomp_check_timeout"];
+    comp_read_wrong [label="比较器读取错误\ncomp_read_wrong"];
+    comp_read_ok [label="比较器读取正确\ncomp_read_ok"];
+    setup_comm_wait [label="设置换向等待\nsetup_comm_wait"];
+    evaluate_comparator_integrity [label="评估比较器完整性\nevaluate_comparator_integrity"];
+    
+    // 换向节点
+    wait_for_comm [label="等待换向\nwait_for_comm", fillcolor=lightyellow];
+    comm1comm2 [label="换向1->2\ncomm1comm2"];
+    comm2comm3 [label="换向2->3\ncomm2comm3"];
+    comm3comm4 [label="换向3->4\ncomm3comm4"];
+    comm4comm5 [label="换向4->5\ncomm4comm5"];
+    comm5comm6 [label="换向5->6\ncomm5comm6"];
+    comm6comm1 [label="换向6->1\ncomm6comm1"];
+    
+    // 时序计算节点
+    calc_next_comm_timing [label="计算下一次换向时序\ncalc_next_comm_timing", fillcolor=lightpink];
+    wait_advance_timing [label="等待提前时序\nwait_advance_timing"];
+    calc_new_wait_times [label="计算新等待时间\ncalc_new_wait_times"];
+    wait_before_zc_scan [label="等待零交叉扫描\nwait_before_zc_scan"];
+    
+    // 零交叉检测流程
+    wait_for_comp_out_high -> comp_check_timeout;
+    wait_for_comp_out_low -> comp_check_timeout;
+    comp_check_timeout -> comp_read_wrong [label="读取错误"];
+    comp_check_timeout -> comp_read_ok [label="读取正确"];
+    comp_read_wrong -> comp_check_timeout [label="继续检测"];
+    comp_read_ok -> setup_comm_wait;
+    setup_comm_wait -> evaluate_comparator_integrity;
+    evaluate_comparator_integrity -> wait_for_comm;
+    
+    // 换向流程
+    wait_for_comm -> comm1comm2 [style=dashed, color=blue, label="在run1"];
+    wait_for_comm -> comm2comm3 [style=dashed, color=blue, label="在run2"];
+    wait_for_comm -> comm3comm4 [style=dashed, color=blue, label="在run3"];
+    wait_for_comm -> comm4comm5 [style=dashed, color=blue, label="在run4"];
+    wait_for_comm -> comm5comm6 [style=dashed, color=blue, label="在run5"];
+    wait_for_comm -> comm6comm1 [style=dashed, color=blue, label="在run6"];
+    
+    // 时序计算流程
+    calc_next_comm_timing -> wait_advance_timing;
+    wait_advance_timing -> calc_new_wait_times;
+    calc_new_wait_times -> wait_before_zc_scan;
+    wait_before_zc_scan -> wait_for_comp_out_high [style=dashed, color=red, label="下一个检测周期"];
+    wait_before_zc_scan -> wait_for_comp_out_low [style=dashed, color=red, label="下一个检测周期"];
+    
+    // 子流程说明
+    subgraph cluster_zc_detection {
+        label = "零交叉检测子流程";
+        style = "filled";
+        color = "lightgrey";
+        wait_for_comp_out_high; wait_for_comp_out_low; comp_check_timeout; comp_read_wrong; comp_read_ok; setup_comm_wait; evaluate_comparator_integrity;
+    }
+    
+    subgraph cluster_commutation {
+        label = "换向子流程";
+        style = "filled";
+        color = "lightgrey";
+        wait_for_comm; comm1comm2; comm2comm3; comm3comm4; comm4comm5; comm5comm6; comm6comm1;
+    }
+    
+    subgraph cluster_timing {
+        label = "时序计算子流程";
+        style = "filled";
+        color = "lightgrey";
+        calc_next_comm_timing; wait_advance_timing; calc_new_wait_times; wait_before_zc_scan;
+    }
+}

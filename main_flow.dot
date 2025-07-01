@@ -1,0 +1,103 @@
+digraph BLHeli_S_Main_Flow {
+    // 图形设置
+    rankdir=TB;
+    node [shape=box, style=filled, fillcolor=lightblue, fontname="Arial", fontsize=12];
+    edge [fontname="Arial", fontsize=10];
+    
+    // 主要节点
+    pgm_start [label="程序启动\npgm_start", fillcolor=lightgreen];
+    init_no_signal [label="无信号初始化\ninit_no_signal"];
+    validate_rcp_start [label="验证RC脉冲\nvalidate_rcp_start"];
+    arming_start [label="解锁序列开始\narming_start"];
+    wait_for_power_on [label="等待加电\nwait_for_power_on"];
+    init_start [label="启动初始化\ninit_start"];
+    run1 [label="运行阶段1\nrun1"];
+    run2 [label="运行阶段2\nrun2"];
+    run3 [label="运行阶段3\nrun3"];
+    run4 [label="运行阶段4\nrun4"];
+    run5 [label="运行阶段5\nrun5"];
+    run6 [label="运行阶段6\nrun6"];
+    run_to_wait_for_power_on [label="返回等待加电\nrun_to_wait_for_power_on"];
+    
+    // 决策节点
+    check_signal_type [label="检测信号类型\n(PWM/OneShot/DShot)", shape=diamond, fillcolor=lightyellow];
+    check_arming [label="检查解锁条件", shape=diamond, fillcolor=lightyellow];
+    check_throttle [label="检查油门值", shape=diamond, fillcolor=lightyellow];
+    check_startup_phase [label="检查启动阶段", shape=diamond, fillcolor=lightyellow];
+    check_initial_run_phase [label="检查初始运行阶段", shape=diamond, fillcolor=lightyellow];
+    check_bidir [label="检查双向模式", shape=diamond, fillcolor=lightyellow];
+    check_dir_change [label="检查方向变化", shape=diamond, fillcolor=lightyellow];
+    check_speed [label="检查速度", shape=diamond, fillcolor=lightyellow];
+    
+    // 流程连接
+    pgm_start -> init_no_signal;
+    init_no_signal -> check_signal_type;
+    check_signal_type -> validate_rcp_start;
+    validate_rcp_start -> arming_start;
+    arming_start -> check_arming;
+    check_arming -> wait_for_power_on [label="解锁成功"];
+    check_arming -> arming_start [label="解锁失败"];
+    wait_for_power_on -> check_throttle;
+    check_throttle -> init_start [label="油门>0"];
+    check_throttle -> wait_for_power_on [label="油门=0"];
+    init_start -> run1;
+    run1 -> run2;
+    run2 -> run3;
+    run3 -> run4;
+    run4 -> run5;
+    run5 -> run6;
+    run6 -> check_startup_phase;
+    
+    check_startup_phase -> check_initial_run_phase [label="非启动阶段"];
+    check_startup_phase -> run1 [label="启动阶段继续"];
+    check_startup_phase -> run_to_wait_for_power_on [label="启动阶段停止"];
+    
+    check_initial_run_phase -> check_bidir [label="非初始运行阶段"];
+    check_initial_run_phase -> run1 [label="初始运行阶段继续"];
+    check_initial_run_phase -> run_to_wait_for_power_on [label="初始运行阶段停止"];
+    
+    check_bidir -> check_dir_change [label="双向模式"];
+    check_bidir -> run_to_wait_for_power_on [label="超时或停止"];
+    check_bidir -> run1 [label="继续运行"];
+    
+    check_dir_change -> check_speed [label="方向变化"];
+    check_dir_change -> run4 [label="需要刹车"];
+    
+    check_speed -> run1 [label="速度足够"];
+    check_speed -> run_to_wait_for_power_on [label="速度过低"];
+    check_speed -> run1 [label="方向变化后重启"];
+    
+    run_to_wait_for_power_on -> wait_for_power_on;
+    
+    // 子流程调用
+    run1 -> wait_for_comp_out_high [style=dashed, color=blue];
+    run1 -> wait_for_comm [style=dashed, color=blue];
+    run1 -> comm1comm2 [style=dashed, color=blue];
+    run1 -> calc_next_comm_timing [style=dashed, color=blue];
+    
+    run2 -> wait_for_comp_out_low [style=dashed, color=blue];
+    run2 -> wait_for_comm [style=dashed, color=blue];
+    run2 -> comm2comm3 [style=dashed, color=blue];
+    run2 -> calc_next_comm_timing [style=dashed, color=blue];
+    
+    run3 -> wait_for_comp_out_high [style=dashed, color=blue];
+    run3 -> wait_for_comm [style=dashed, color=blue];
+    run3 -> comm3comm4 [style=dashed, color=blue];
+    run3 -> calc_next_comm_timing [style=dashed, color=blue];
+    
+    run4 -> wait_for_comp_out_low [style=dashed, color=blue];
+    run4 -> wait_for_comm [style=dashed, color=blue];
+    run4 -> comm4comm5 [style=dashed, color=blue];
+    run4 -> calc_next_comm_timing [style=dashed, color=blue];
+    
+    run5 -> wait_for_comp_out_high [style=dashed, color=blue];
+    run5 -> wait_for_comm [style=dashed, color=blue];
+    run5 -> comm5comm6 [style=dashed, color=blue];
+    run5 -> calc_next_comm_timing [style=dashed, color=blue];
+    
+    run6 -> wait_for_comp_out_low [style=dashed, color=blue];
+    run6 -> wait_for_comm [style=dashed, color=blue];
+    run6 -> comm6comm1 [style=dashed, color=blue];
+    run6 -> check_temp_voltage_and_limit_power [style=dashed, color=blue];
+    run6 -> calc_next_comm_timing [style=dashed, color=blue];
+}

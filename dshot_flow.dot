@@ -1,0 +1,125 @@
+digraph BLHeli_S_DShot_Flow {
+    // 图形设置
+    rankdir=TB;
+    node [shape=box, style=filled, fillcolor=lightblue, fontname="Arial", fontsize=12];
+    edge [fontname="Arial", fontsize=10];
+    
+    // DShot命令处理节点
+    dshot_cmd_entry [label="DShot命令入口点\ncheck_dshot_cmd", fillcolor=lightgreen];
+    check_dshot_cmd_value [label="检查Dshot_Cmd值", shape=diamond];
+    
+    // 蜂鸣命令处理
+    dshot_beep_2 [label="DShot蜂鸣命令2\n(低频蜂鸣)"];
+    dshot_beep_3 [label="DShot蜂鸣命令3\n(中频蜂鸣)"];
+    dshot_beep_4 [label="DShot蜂鸣命令4\n(高频蜂鸣)"];
+    dshot_beep_5 [label="DShot蜂鸣命令5\n(更高频蜂鸣)"];
+    
+    // 方向命令处理
+    dshot_direction_1 [label="DShot方向命令1\n(正常方向)"];
+    dshot_direction_2 [label="DShot方向命令2\n(反向)"];
+    dshot_direction_3 [label="DShot方向命令3\n(双向模式)"];
+    dshot_direction_normal [label="设置正常方向"];
+    dshot_direction_reverse [label="设置反向"];
+    dshot_direction_bidir [label="设置双向模式"];
+    
+    // 保存设置命令处理
+    dshot_save_settings [label="DShot保存设置命令"];
+    
+    // 命令计数器检查
+    check_cmd_cnt [label="检查Dshot_Cmd_Cnt\n(需要连续6次相同命令)", shape=diamond];
+    increment_cmd_cnt [label="递增Dshot_Cmd_Cnt"];
+    reset_cmd_cnt [label="重置Dshot_Cmd_Cnt"];
+    
+    // 设置标志和参数
+    set_normal_flags [label="清除PGM_DIR_REV\n清除PGM_BIDIR"];
+    set_reverse_flags [label="设置PGM_DIR_REV\n清除PGM_BIDIR"];
+    set_bidir_flags [label="设置PGM_BIDIR"];
+    save_to_eeprom [label="设置Flash密钥\n调用erase_and_store_all_in_eeprom"];
+    
+    // 返回等待加电
+    return_to_wait [label="返回wait_for_power_on_loop", fillcolor=lightpink];
+    
+    // DShot命令处理流程
+    dshot_cmd_entry -> check_dshot_cmd_value;
+    
+    // 蜂鸣命令处理流程
+    check_dshot_cmd_value -> dshot_beep_2 [label="Cmd=2"];
+    check_dshot_cmd_value -> dshot_beep_3 [label="Cmd=3"];
+    check_dshot_cmd_value -> dshot_beep_4 [label="Cmd=4"];
+    check_dshot_cmd_value -> dshot_beep_5 [label="Cmd=5"];
+    dshot_beep_2 -> return_to_wait;
+    dshot_beep_3 -> return_to_wait;
+    dshot_beep_4 -> return_to_wait;
+    dshot_beep_5 -> return_to_wait;
+    
+    // 方向命令处理流程
+    check_dshot_cmd_value -> dshot_direction_1 [label="Cmd=7"];
+    check_dshot_cmd_value -> dshot_direction_2 [label="Cmd=8"];
+    check_dshot_cmd_value -> dshot_direction_3 [label="Cmd=9"];
+    dshot_direction_1 -> check_cmd_cnt;
+    dshot_direction_2 -> check_cmd_cnt;
+    dshot_direction_3 -> check_cmd_cnt;
+    
+    // 保存设置命令处理流程
+    check_dshot_cmd_value -> dshot_save_settings [label="Cmd=12"];
+    dshot_save_settings -> check_cmd_cnt;
+    
+    // 其他命令处理
+    check_dshot_cmd_value -> reset_cmd_cnt [label="其他命令"];
+    reset_cmd_cnt -> return_to_wait;
+    
+    // 命令计数器检查流程
+    check_cmd_cnt -> increment_cmd_cnt [label="计数<6"];
+    check_cmd_cnt -> dshot_direction_normal [label="计数=6且Cmd=7"];
+    check_cmd_cnt -> dshot_direction_reverse [label="计数=6且Cmd=8"];
+    check_cmd_cnt -> dshot_direction_bidir [label="计数=6且Cmd=9"];
+    check_cmd_cnt -> save_to_eeprom [label="计数=6且Cmd=12"];
+    increment_cmd_cnt -> return_to_wait;
+    
+    // 设置标志和参数流程
+    dshot_direction_normal -> set_normal_flags;
+    dshot_direction_reverse -> set_reverse_flags;
+    dshot_direction_bidir -> set_bidir_flags;
+    set_normal_flags -> reset_cmd_cnt;
+    set_reverse_flags -> reset_cmd_cnt;
+    set_bidir_flags -> reset_cmd_cnt;
+    save_to_eeprom -> reset_cmd_cnt;
+    
+    // 子流程说明
+    subgraph cluster_dshot_cmd {
+        label = "DShot命令处理子流程";
+        style = "filled";
+        color = "lightgrey";
+        dshot_cmd_entry; check_dshot_cmd_value;
+    }
+    
+    subgraph cluster_dshot_beep {
+        label = "DShot蜂鸣命令子流程";
+        style = "filled";
+        color = "lightgrey";
+        dshot_beep_2; dshot_beep_3; dshot_beep_4; dshot_beep_5;
+    }
+    
+    subgraph cluster_dshot_direction {
+        label = "DShot方向命令子流程";
+        style = "filled";
+        color = "lightgrey";
+        dshot_direction_1; dshot_direction_2; dshot_direction_3;
+        dshot_direction_normal; dshot_direction_reverse; dshot_direction_bidir;
+        set_normal_flags; set_reverse_flags; set_bidir_flags;
+    }
+    
+    subgraph cluster_dshot_save {
+        label = "DShot保存设置子流程";
+        style = "filled";
+        color = "lightgrey";
+        dshot_save_settings; save_to_eeprom;
+    }
+    
+    subgraph cluster_cmd_cnt {
+        label = "命令计数器子流程";
+        style = "filled";
+        color = "lightgrey";
+        check_cmd_cnt; increment_cmd_cnt; reset_cmd_cnt;
+    }
+}
