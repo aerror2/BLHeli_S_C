@@ -1,3 +1,12 @@
+
+I am try to translate  blheli_s to c language, because i want to use stm32/or other mcu to control it.
+
+
+
+
+----  here is the original readme-----
+
+
 This tree contains BLHeli code for sensorless brushless motor electronic speed control (ESC) boards.  
   
 To view and use the files, click the "Clone or download" button on this page,  
