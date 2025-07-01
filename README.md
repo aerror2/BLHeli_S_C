@@ -1,7 +1,7 @@
 
-I am try to translate  blheli_s to c language, because i want to use stm32/or other mcu to control it.
+A project translate  blheli_s to c language, because i want to use stm32/or other mcu to control it.
 
-
+I make a lot of comments and draw the flow chart for the blheli-s 
 
 
 ----  here is the original readme-----
